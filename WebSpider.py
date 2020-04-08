@@ -6,7 +6,7 @@ import requests as req
 from bs4 import BeautifulSoup
 
 
-def get_work_log(username, session, cookie):
+def get_work_log(username, cookie):
     today = datetime.now().replace(tzinfo=timezone(timedelta(hours=8)))
     today = today.replace(today.year, today.month, today.day, 0, 0, 0, 0)
     offset = 0
@@ -16,7 +16,7 @@ def get_work_log(username, session, cookie):
     times = None
     time_tag = None
 
-    while utc_time is None or utc_time > today:
+    while utc_time is None or utc_time >= today:
         url = "http://172.20.20.81/" + username + ".atom?limit=20&offset=" + str(offset)
         src_html = req.get(url=url, cookies=cookie)
         src_html_text += src_html.text
@@ -29,17 +29,20 @@ def get_work_log(username, session, cookie):
     for index in range(len(times) - 1, -1, -1):
         utc_time = datetime.strptime(times[index].string, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
         if utc_time > today:
-            time_tag = times[index].string
+            # 由于时间展示在comment之前 为保持日志完整性  向后移动1位
+            time_tag = times[index + 1].string
             break
 
     if time_tag is None:
-        src_html_text = ''
         work_log = '快乐摸鱼'
     else:
+        # 截取今日提交记录
         src_html_text = src_html_text[0:src_html_text.index(time_tag)]
         soup = BeautifulSoup(src_html_text, 'lxml')
+        # 获取所有提交记录comment
         data = soup.find_all('p', dir="auto")
         regex = re.compile("Merge.*")
+        # log_set  用于防重复
         log_set = set()
         count = 1
         for comment in data:
@@ -105,17 +108,19 @@ def get_cookie(username, password):
         "user[password]": password,
         "user[remember_me]": 0
     }
-    session = req.session()
     # 禁止重定向   否则会导致被重定向导致cookie登录失效
     response = req.post(url, data=data, allow_redirects=False, headers=header, cookies=first_cookie)
+    if response.status_code != 302:
+        print("警告：登录失败，可能无法获取到最新日志")
     cookie = response.cookies.get_dict()
-    return session, cookie
+    return cookie
 
 
 if __name__ == '__main__':
     gitUserName = input("请输入gitlab用户名：")
+    # getpass可用于隐藏密码输入  但pycharm并不兼容
     gitPassword = getpass.getpass("请输入gitlab密码：")
-    session_logged, cookie_logged = get_cookie(gitUserName, gitPassword)
-    today_work_log = get_work_log(gitUserName, session_logged, cookie_logged)
+    cookie_logged = get_cookie(gitUserName, gitPassword)
+    today_work_log = get_work_log(gitUserName, cookie_logged)
     print("今日工作:")
     print(today_work_log)
