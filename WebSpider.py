@@ -47,14 +47,14 @@ def get_work_log(username, cookie):
         count = 1
         for comment in data:
             # 过滤Merge记录
-            if regex.match(comment.string):
+            if regex.match(comment.text):
                 continue
             # 过滤重复commit记录
-            if comment.string in log_set:
+            if comment.text in log_set:
                 continue
-            work_log += str(count) + "." + comment.string + "\n"
+            work_log += str(count) + "." + comment.text + "\n"
             count = count + 1
-            log_set.add(comment.string)
+            log_set.add(comment.text)
 
     return work_log
 
