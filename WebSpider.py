@@ -6,7 +6,7 @@ import requests as req
 from bs4 import BeautifulSoup
 
 
-def get_work_log(username, cookie):
+def get_work_log(username, session, cookie):
     today = datetime.now().replace(tzinfo=timezone(timedelta(hours=8)))
     today = today.replace(today.year, today.month, today.day, 0, 0, 0, 0)
     offset = 0
@@ -34,6 +34,7 @@ def get_work_log(username, cookie):
 
     if time_tag is None:
         src_html_text = ''
+        work_log = '快乐摸鱼'
     else:
         src_html_text = src_html_text[0:src_html_text.index(time_tag)]
         soup = BeautifulSoup(src_html_text, 'lxml')
@@ -82,6 +83,21 @@ def get_cookie(username, password):
     url = "http://172.20.20.81/users/sign_in"
     login_html, first_cookie = get_gitlab_html(url)
     token = get_token(login_html)
+    header = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Content-Length': '215',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Host': '172.20.20.81',
+        'Origin': 'http://172.20.20.81',
+        'Pragma': 'no-cache',
+        'Referer': 'http://172.20.20.81/users/sign_in',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36'
+    }
     data = {
         "utf8": "✓",
         "authenticity_token": token,
@@ -89,17 +105,17 @@ def get_cookie(username, password):
         "user[password]": password,
         "user[remember_me]": 0
     }
-    response = req.post(url, data=data, cookies=first_cookie)
-    if response.status_code != 200:
-        raise Exception("response code:" + response.status_code)
+    session = req.session()
+    # 禁止重定向   否则会导致被重定向导致cookie登录失效
+    response = req.post(url, data=data, allow_redirects=False, headers=header, cookies=first_cookie)
     cookie = response.cookies.get_dict()
-    return cookie
+    return session, cookie
 
 
 if __name__ == '__main__':
     gitUserName = input("请输入gitlab用户名：")
     gitPassword = getpass.getpass("请输入gitlab密码：")
-    cookie_logged = get_cookie(gitUserName, gitPassword)
-    today_work_log = get_work_log(gitUserName, cookie_logged)
+    session_logged, cookie_logged = get_cookie(gitUserName, gitPassword)
+    today_work_log = get_work_log(gitUserName, session_logged, cookie_logged)
     print("今日工作:")
     print(today_work_log)
