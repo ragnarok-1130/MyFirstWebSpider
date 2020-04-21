@@ -45,7 +45,8 @@ def get_work_log(username, cookie):
         # log_set  用于防重复
         log_set = set()
         count = 1
-        for comment in data:
+        for index in range(len(data) - 1, -1, -1):
+            comment = data[index]
             # 过滤Merge记录
             if regex.match(comment.text):
                 continue
