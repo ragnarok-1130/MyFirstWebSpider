@@ -1,4 +1,5 @@
 import getpass
+import os
 import re
 from datetime import datetime, timedelta, timezone
 
@@ -125,3 +126,4 @@ if __name__ == '__main__':
     today_work_log = get_work_log(gitUserName, cookie_logged)
     print("今日工作:")
     print(today_work_log)
+    os.system("pause")
